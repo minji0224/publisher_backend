@@ -12,3 +12,10 @@ data class AuthProfile (
         val publisherName: String, // 로그인(아이덴티티스)
         val businessRegistrationNumber: String // 프로필
 )
+
+data class ProfileResponse(
+        val publisherName : String,
+        val email : String,
+        val businessRegistrationNumber : String
+
+)

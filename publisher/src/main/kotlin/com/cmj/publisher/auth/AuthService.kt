@@ -38,6 +38,7 @@ class AuthService(private  val database: Database) {
                     it[this.secret] = secret
                 }
                 val profileId = Profiles.insertAndGetId {
+                    it[this.publisherName] = signupRequest.publisherName
                     it[this.businessRegistrationNumber] = signupRequest.businessRegistrationNumber
                     it[this.email] = signupRequest.email
                     it[this.identityId] = identityId.value

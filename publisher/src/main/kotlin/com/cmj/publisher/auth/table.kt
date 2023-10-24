@@ -1,5 +1,6 @@
 package com.cmj.publisher.auth
 
+import com.cmj.publisher.book.Books
 import jakarta.annotation.PostConstruct
 import org.jetbrains.exposed.dao.id.LongIdTable
 import org.jetbrains.exposed.sql.Database
@@ -13,9 +14,11 @@ object Identities : LongIdTable("identity") {
 }
 
 object Profiles : LongIdTable("profile") {
+    val publisherName = varchar("publisherName", length = 100)
     val email = varchar("email", 200)
     val businessRegistrationNumber = varchar("businessRegistrationNumber", 100)
     val identityId = reference("identity_id", Identities)
+//    val bookId = reference("book_id", Books)
 }
 
 @Configuration
