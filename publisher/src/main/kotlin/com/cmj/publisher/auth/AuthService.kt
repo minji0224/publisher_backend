@@ -77,7 +77,7 @@ class AuthService(private  val database: Database) {
 
             return@transaction Pair(true, mapOf(
                     "id" to profileRecord[Profiles.id],
-                    "email" to profileRecord[Profiles.email],
+                    "businessRegistrationNumber" to profileRecord[Profiles.businessRegistrationNumber],
                     "publisherName" to identityRecord[Identities.publisherName],
                     "secret" to identityRecord[Identities.secret]
             ))

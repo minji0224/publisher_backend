@@ -4,6 +4,8 @@ import com.cmj.publisher.auth.Profiles
 import com.cmj.publisher.book.Books.autoIncrement
 import org.jetbrains.exposed.sql.javatime.datetime
 
+
+// 조회할 객체
 data class BookResponse(
     val id : Long,
     val publisher : String,
@@ -17,7 +19,8 @@ data class BookResponse(
     val createdDate : String
 )
 
-data class BookCreateRequest(
+// 큐로 관리자에게 보낼 객체
+data class BookCreateMessage(
         val title : String,
         val publisher : String,
         val author : String,
@@ -25,11 +28,12 @@ data class BookCreateRequest(
         val isbn : String,
         val categoryName : String,
         val priceStandard : String,
-        val quantity : String
+        val quantity : String,
+//        val file: BookFileMessage
 )
 
 
-
+// 클라이언트에서 내쪽에 보내줄 요청 객체
 data class BookWithFileCreateRequest(
         val publisher : String,
         val categoryName : String,
@@ -42,6 +46,7 @@ data class BookWithFileCreateRequest(
 )
 
 
+// 클라이언트에 보내줄 응답객체
 data class BookWithFileResponse(
     val id : Long,
     val title : String,
@@ -52,7 +57,6 @@ data class BookWithFileResponse(
     val priceStandard : String,
     val quantity : String,
     val createdDate : String,
-//    val file : List<BookFileResponse>
     val file: BookFileResponse
 )
 

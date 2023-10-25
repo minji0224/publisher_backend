@@ -2,6 +2,7 @@ package com.cmj.publisher.book
 
 import com.cmj.publisher.auth.Auth
 import com.cmj.publisher.auth.AuthProfile
+
 import com.cmj.publisher.cummerce.RabbitProducer
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.jetbrains.exposed.sql.batchInsert
@@ -34,57 +35,6 @@ class BookController(private val rabbitProducer: RabbitProducer) {
             )}
         }
         return books
-    }
-
-
-
-    @Auth
-    @PostMapping
-    fun create(@RequestBody bookCreateRequest: BookCreateRequest, @RequestAttribute authProfile: AuthProfile)
-        : ResponseEntity<Map<String, Any?>> {
-
-        println(
-            "${bookCreateRequest.title}, ${bookCreateRequest.author},${bookCreateRequest.pubDate}," +
-                "${bookCreateRequest.isbn}, ${bookCreateRequest.categoryName}, ${bookCreateRequest.priceStandard}," +
-                bookCreateRequest.quantity
-        )
-
-        // 널체크하기
-
-        val (result, response) = transaction {
-            val result = Books.insert {
-                it[title] = bookCreateRequest.title
-                it[publisher] = bookCreateRequest.publisher
-                it[author] = bookCreateRequest.author
-                it[pubDate] = bookCreateRequest.pubDate
-                it[isbn] = bookCreateRequest.isbn
-                it[categoryName] = bookCreateRequest.categoryName
-                it[priceStandard] = bookCreateRequest.priceStandard.toInt()
-                it[quantity] = bookCreateRequest.quantity.toInt()
-                it[createdDate] = LocalDateTime.now()
-                it[profileId] = authProfile.id
-            }.resultedValues ?: return@transaction Pair(false, null)
-
-            val record = result.first()
-
-            return@transaction Pair(true, BookResponse(
-                    record[Books.id],
-                    record[Books.publisher],
-                    record[Books.title],
-                    record[Books.author],
-                    record[Books.pubDate],
-                    record[Books.isbn],
-                    record[Books.categoryName],
-                    record[Books.priceStandard].toString(),
-                    record[Books.quantity].toString(),
-                    record[Books.createdDate].toString(),
-            ))
-        }
-
-        if(result) {
-            return ResponseEntity.status(HttpStatus.CREATED).body(mapOf("data" to response))
-        }
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(mapOf("data" to response, "error" to "conflict"))
     }
 
 
@@ -159,6 +109,7 @@ class BookController(private val rabbitProducer: RabbitProducer) {
 
             val fileResponse: BookFileResponse = insertedBookFile.first()
 
+
             return@transaction BookWithFileResponse(
                     id = insertedBook[Books.id],
                     title = insertedBook[Books.title],
@@ -169,13 +120,12 @@ class BookController(private val rabbitProducer: RabbitProducer) {
                     priceStandard = insertedBook[Books.priceStandard].toString(),
                     quantity = insertedBook[Books.quantity].toString(),
                     createdDate = insertedBook[Books.createdDate].toString(),
-//                    file = insertedBookFile
                     file = fileResponse
             )
         }
 
         // 큐로 줄 객체
-        val bookCreateRequest = BookCreateRequest(
+        val bookCreateMessage = BookCreateMessage(
             publisher = bookWithFileCreateRequest.publisher,
             title = bookWithFileCreateRequest.title,
             author = bookWithFileCreateRequest.author,
@@ -183,12 +133,12 @@ class BookController(private val rabbitProducer: RabbitProducer) {
             isbn = bookWithFileCreateRequest.isbn,
             categoryName = bookWithFileCreateRequest.categoryName,
             priceStandard = bookWithFileCreateRequest.priceStandard,
-            quantity = bookWithFileCreateRequest.quantity
+            quantity = bookWithFileCreateRequest.quantity,
         )
 
         // 큐로 관리자에게 주기
         // 파일도 같이 줘야됨.
-        rabbitProducer.sendCreateBook(bookCreateRequest)
+        rabbitProducer.sendCreateBook(bookCreateMessage)
         return ResponseEntity.status(HttpStatus.CREATED).body(result)
     }
 

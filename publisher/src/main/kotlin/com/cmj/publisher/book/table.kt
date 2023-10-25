@@ -36,6 +36,13 @@ object BookFiles : LongIdTable("book_file") {
 }
 
 
+object BookSales : LongIdTable("book_sale") {
+    val bookId = reference("book_id", Books.id)
+    val quantitySold = integer("quantity_sold")
+    val saleDate = varchar("sale_date", 10)
+}
+
+
 
 // 테이블 생성 코드
 @Configuration
