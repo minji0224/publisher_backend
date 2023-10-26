@@ -6,7 +6,10 @@ import com.cmj.publisher.auth.AuthProfile
 import com.cmj.publisher.cummerce.RabbitProducer
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
+import org.jetbrains.exposed.sql.javatime.date
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageImpl
@@ -19,6 +22,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
 import java.sql.Connection
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
 
@@ -189,32 +193,91 @@ class BookController(private val rabbitProducer: RabbitProducer) {
     data class SearchRequest(
             val keyword: String?,
             val option: String?,
-            val createdDate: String?,
+            val date: String?,
             val page: Int,
             val size: Int
     )
 
-    @PostMapping("/test")
+    //        val query = when {
+//            searchRequest.keyword != null && searchRequest.option != null -> {
+//                when(searchRequest.option) {
+//                    "title" -> Books.select { Books.title like "%${searchRequest.keyword}" }
+//                    "author"-> Books.select { Books.author like "%${searchRequest.keyword}" }
+//                    "isbn" -> Books.select { Books.isbn like "%${searchRequest.keyword}" }
+//                    else -> error("잘못된 옵션값 : Invalid option")
+//                }
+//            }
+//            searchRequest.keyword != null -> {
+//                Books.select {
+//                    (Books.title like "%${searchRequest.keyword}") or
+//                    (Books.author like "%${searchRequest.keyword}") or
+//                    (Books.isbn like "%${searchRequest.keyword}")
+//                }
+//            }
+//            else -> Books.selectAll()
+//        }
+    @PostMapping("/test") // 빈값 체크해야됨!!!!!
     fun searchItem(@RequestBody searchRequest: SearchRequest) : Page<BookResponse>
     = transaction(Connection.TRANSACTION_READ_UNCOMMITTED, readOnly = true) {
 
         println(searchRequest)
 
+        val titleQuery = Books.title like "%${searchRequest.keyword}"
+        val authorQuery = Books.author like "%${searchRequest.keyword}"
+        val isbnQuery= Books.isbn like "%${searchRequest.keyword}"
+        val dateToday = Books.createdDate.date() eq LocalDate.now()
+        val date6Month = Books.createdDate.date() greaterEq LocalDate.now().minusMonths(6)
+        val date1Year = Books.createdDate.date() greaterEq LocalDate.now().minusYears(1)
+
+
         val query = when {
-            searchRequest.keyword != null && searchRequest.option != null -> {
+
+            searchRequest.keyword != null && searchRequest.option != null  && searchRequest.date != null -> {
+
                 when(searchRequest.option) {
-                    "title" -> Books.select { Books.title like "%${searchRequest.keyword}" }
-                    "author"-> Books.select { Books.author like "%${searchRequest.keyword}" }
-                    "isbn" -> Books.select { Books.isbn like "%${searchRequest.keyword}" }
+                    "title" -> {
+                        when(searchRequest.date) {
+                            "today" -> Books.select { (titleQuery) and (dateToday) }
+                            "sixMonth" -> Books.select { (titleQuery) and (date6Month)}
+                            "oneYear" -> Books.select { (titleQuery) and (date1Year)}
+                            "all" -> Books.select { titleQuery }
+                            else -> error("잘못된 날짜값: ")
+                        }
+                    }
+                    "author"-> {
+                        when(searchRequest.date) {
+                            "today" -> Books.select { (authorQuery) and (dateToday) }
+                            "sixMonth" -> Books.select { (authorQuery) and (date6Month)}
+                            "oneYear" -> Books.select { (authorQuery) and (date1Year)}
+                            "all" -> Books.select { authorQuery }
+                            else -> error("잘못된 날짜값: ")
+                        }
+                    }
+                    "isbn" -> {
+                        when(searchRequest.date) {
+                            "today" -> Books.select { (isbnQuery) and (dateToday) }
+                            "sixMonth" -> Books.select { (isbnQuery) and (date6Month)}
+                            "oneYear" -> Books.select { (isbnQuery) and (date1Year)}
+                            "all" -> Books.select { isbnQuery }
+                            else -> error("잘못된 날짜값: ")
+                        }
+                    }
                     else -> error("잘못된 옵션값 : Invalid option")
                 }
             }
-            searchRequest.keyword != null -> {
-                Books.select {
-                    (Books.title like "%${searchRequest.keyword}") or
-                    (Books.author like "%${searchRequest.keyword}") or
-                    (Books.isbn like "%${searchRequest.keyword}")
+
+            searchRequest.keyword != null && searchRequest.date != null -> {
+                when(searchRequest.date) {
+                    "today" -> Books.select { ((titleQuery) or (authorQuery) or (isbnQuery)) and (dateToday) }
+                    "sixMonth" -> Books.select { ((titleQuery) or (authorQuery) or (isbnQuery)) and (date6Month) }
+                    "oneYear" -> Books.select { ((titleQuery) or (authorQuery) or (isbnQuery)) and (date1Year) }
+                    "all" -> Books.select { (titleQuery) or (authorQuery) or (isbnQuery) }
+                    else -> error("잘못된 날짜값: ")
                 }
+            }
+
+            searchRequest.keyword != null -> {
+                Books.select {(titleQuery) or (authorQuery) or (isbnQuery)}
             }
             else -> Books.selectAll()
         }
