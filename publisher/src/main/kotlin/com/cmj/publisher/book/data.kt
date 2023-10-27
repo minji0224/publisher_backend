@@ -4,6 +4,14 @@ import com.cmj.publisher.auth.Profiles
 import com.cmj.publisher.book.Books.autoIncrement
 import org.jetbrains.exposed.sql.javatime.datetime
 
+// 검색객체
+data class SearchRequest(
+    val keyword: String?,
+    val option: String?,
+    val date: String?,
+    val page: Int,
+    val size: Int
+)
 
 // 조회할 객체
 data class BookResponse(
