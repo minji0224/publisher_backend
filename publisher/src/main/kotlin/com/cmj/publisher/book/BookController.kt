@@ -39,13 +39,31 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
     @GetMapping
     fun fetch(@RequestAttribute authProfile: AuthProfile) :List<BookResponse> {
 
+        println("북패처")
         val books = transaction {
             Books.select { Books.profileId eq authProfile.id }.map{ r -> BookResponse(
                     r[Books.id], r[Books.publisher], r[Books.title], r[Books.author], r[Books.pubDate], r[Books.isbn],
                     r[Books.categoryName], r[Books.priceStandard].toString(), r[Books.quantity].toString(), r[Books.createdDate].toString(),
             )}
         }
+        println(books.size)
         return books
+    }
+
+
+    @Auth
+    @GetMapping("/paging")
+    fun paging(@RequestParam size: Int, @RequestParam page: Int, @RequestAttribute authProfile: AuthProfile )
+    : Page<BookResponse> = transaction (Connection.TRANSACTION_READ_UNCOMMITTED, readOnly = true) {
+        val content = Books.select{Books.profileId eq authProfile.id}.orderBy(Books.id to SortOrder.DESC)
+            .limit(size, offset = (size * page).toLong()).map {
+                r -> BookResponse(
+            r[Books.id], r[Books.publisher], r[Books.title], r[Books.author], r[Books.pubDate], r[Books.isbn],
+            r[Books.categoryName], r[Books.priceStandard].toString(), r[Books.quantity].toString(), r[Books.createdDate].toString(),
+                )
+        }
+        val totalCount = Books.select{Books.profileId eq authProfile.id}.count()
+        return@transaction PageImpl(content, PageRequest.of(page, size), totalCount)
     }
 
 
@@ -199,7 +217,6 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
                    @RequestAttribute authProfile: AuthProfile): Page<BookResponse>
             = transaction(Connection.TRANSACTION_READ_UNCOMMITTED, readOnly = true) {
 
-        println(authProfile)
         println(searchRequest)
 //        val userBooks = Books.select{Books.profileId eq authProfile.id}.map{it[Books.id]}
         val userBooks = Books.profileId eq authProfile.id
@@ -302,6 +319,6 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
 
 
 
-    // 파일다운메서드 만들기
+
 
 }
