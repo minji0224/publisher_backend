@@ -22,12 +22,13 @@ object Books : Table("book") {
     val isbn = varchar("isbn", 13)
     val categoryName = varchar("category_name", 255)
     val priceStandard = integer("price_standard")
-    val quantity = integer("quantity")
-//    val initialQuantity = integer("initial_quantity")
-//    val currentQuantity = integer("current_quantity")
+//    val quantity = integer("quantity")
+    val initialQuantity = integer("initial_quantity")
+    val currentQuantity = integer("current_quantity")
     val createdDate  = datetime("created_date")
     override val primaryKey = PrimaryKey(id, name = "pk_book_id")
     val profileId = reference("profile_id", Profiles);
+    val isActive = bool("is_Active") //활성화/비활성화
 }
 
 object BookFiles : LongIdTable("book_file") {

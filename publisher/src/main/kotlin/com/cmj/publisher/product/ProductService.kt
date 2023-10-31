@@ -7,9 +7,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import org.springframework.scheduling.annotation.Scheduled
 
 @Service
-class ProductService(
-    private val productClient: ProductClient,
-    private val redisTemplate: RedisTemplate<String, String>) {
+class ProductService( private val productClient: ProductClient,  private val redisTemplate: RedisTemplate<String, String>) {
 
     private val mapper = jacksonObjectMapper()
 
@@ -38,5 +36,11 @@ class ProductService(
             return listOf()
         }
     }
+
+
+
+
+
+
 
 }

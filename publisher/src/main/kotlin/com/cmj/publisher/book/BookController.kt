@@ -40,7 +40,8 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
         val books = transaction {
             Books.select { Books.profileId eq authProfile.id }.map{ r -> BookResponse(
                     r[Books.id], r[Books.publisher], r[Books.title], r[Books.author], r[Books.pubDate], r[Books.isbn],
-                    r[Books.categoryName], r[Books.priceStandard].toString(), r[Books.quantity].toString(), r[Books.createdDate].toString(),
+                    r[Books.categoryName], r[Books.priceStandard].toString(), r[Books.currentQuantity].toString(), r[Books.createdDate].toString(),
+                r[Books.isActive]
             )}
         }
         println(books.size)
@@ -56,7 +57,8 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
             .limit(size, offset = (size * page).toLong()).map {
                 r -> BookResponse(
             r[Books.id], r[Books.publisher], r[Books.title], r[Books.author], r[Books.pubDate], r[Books.isbn],
-            r[Books.categoryName], r[Books.priceStandard].toString(), r[Books.quantity].toString(), r[Books.createdDate].toString(),
+            r[Books.categoryName], r[Books.priceStandard].toString(), r[Books.currentQuantity].toString(), r[Books.createdDate].toString(),
+                    r[Books.isActive]
                 )
         }
         val totalCount = Books.select{Books.profileId eq authProfile.id}.count()
@@ -110,9 +112,11 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
                 it[isbn] = bookWithFileCreateRequest.isbn
                 it[categoryName] = bookWithFileCreateRequest.categoryName
                 it[priceStandard] = bookWithFileCreateRequest.priceStandard.toInt()
-                it[quantity] = bookWithFileCreateRequest.quantity.toInt()
+                it[initialQuantity] = bookWithFileCreateRequest.quantity.toInt()
+                it[currentQuantity] = bookWithFileCreateRequest.quantity.toInt()
                 it[createdDate] = LocalDateTime.now()
                 it[profileId] = authProfile.id
+                it[isActive] = false
             }.resultedValues!!.first()
 
             BookFiles.batchInsert(fileList) {
@@ -160,7 +164,7 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
                     isbn = insertedBook[Books.isbn],
                     categoryName = insertedBook[Books.categoryName],
                     priceStandard = insertedBook[Books.priceStandard].toString(),
-                    quantity = insertedBook[Books.quantity].toString(),
+                    quantity = insertedBook[Books.initialQuantity].toString(),
                     createdDate = insertedBook[Books.createdDate].toString(),
                     file = fileResponse
             )
@@ -211,75 +215,38 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
 
     @Auth
     @PostMapping("/paging/search") // 빈값 체크해야됨!!!!!
-    fun searchPaging(@RequestBody searchRequest: SearchRequest,
-                   @RequestAttribute authProfile: AuthProfile): Page<BookResponse>
+    fun searchPagingTest(@RequestBody searchRequest: SearchRequest,
+                         @RequestAttribute authProfile: AuthProfile): Page<BookResponse>
             = transaction(Connection.TRANSACTION_READ_UNCOMMITTED, readOnly = true) {
 
         println(searchRequest)
-//        val userBooks = Books.select{Books.profileId eq authProfile.id}.map{it[Books.id]}
         val userBooks = Books.profileId eq authProfile.id
-        val titleQuery = Books.title like "%${searchRequest.keyword}"
-        val authorQuery = Books.author like "%${searchRequest.keyword}"
-        val isbnQuery= Books.isbn like "%${searchRequest.keyword}"
+        val keyword = "%${searchRequest.keyword}"
+
         val dateToday = Books.createdDate.date() eq LocalDate.now()
         val date6Month = Books.createdDate.date() greaterEq LocalDate.now().minusMonths(6)
         val date1Year = Books.createdDate.date() greaterEq LocalDate.now().minusYears(1)
 
 
-        val query = when {
-
-            searchRequest.keyword != null && searchRequest.option != null  && searchRequest.date != null -> {
-
-                when(searchRequest.option) {
-                    "title" -> {
-                        when(searchRequest.date) {
-                            "today" -> Books.select { (titleQuery) and (dateToday) and(userBooks) }
-                            "sixMonth" -> Books.select { (titleQuery) and (date6Month) and(userBooks) }
-                            "oneYear" -> Books.select { (titleQuery) and (date1Year) and(userBooks) }
-                            "all" -> Books.select { (titleQuery) and(userBooks)  }
-                            else -> error("잘못된 날짜값: ")
-                        }
+        val query = Books.select {
+            userBooks and when{
+                !searchRequest.keyword.isNullOrEmpty() -> {
+                    when(searchRequest.option) {
+                        "title" -> Books.title like keyword
+                        "author" -> Books.author like keyword
+                        "isbn" -> Books.isbn like keyword
+                        else -> (Books.title like keyword) or (Books.author like keyword) or (Books.isbn like keyword)
                     }
-                    "author"-> {
-                        when(searchRequest.date) {
-                            "today" -> Books.select { (authorQuery) and (dateToday) and(userBooks)  }
-                            "sixMonth" -> Books.select { (authorQuery) and (date6Month) and(userBooks) }
-                            "oneYear" -> Books.select { (authorQuery) and (date1Year) and(userBooks) }
-                            "all" -> Books.select { (authorQuery) and(userBooks) }
-                            else -> error("잘못된 날짜값: ")
-                        }
-                    }
-                    "isbn" -> {
-                        when(searchRequest.date) {
-                            "today" -> Books.select { (isbnQuery) and (dateToday) }
-                            "sixMonth" -> Books.select { (isbnQuery) and (date6Month)}
-                            "oneYear" -> Books.select { (isbnQuery) and (date1Year)}
-                            "all" -> Books.select { (isbnQuery) and(userBooks) }
-                            else -> error("잘못된 날짜값: ")
-                        }
-                    }
-                    else -> error("잘못된 옵션값 : Invalid option")
                 }
+                // keyword가 nullOrEmpty 경우
+                else -> Op.TRUE
+            } and when(searchRequest.date) {
+                "today" -> dateToday
+                "sixMonth" -> date6Month
+                "oneYear" -> date1Year
+                else -> Op.TRUE
             }
-
-            searchRequest.keyword != null && searchRequest.date != null -> {
-                when(searchRequest.date) {
-                    "today" -> Books.select { ((titleQuery) or (authorQuery) or (isbnQuery)) and (dateToday) and(userBooks) }
-                    "sixMonth" -> Books.select { ((titleQuery) or (authorQuery) or (isbnQuery)) and (date6Month) and(userBooks) }
-                    "oneYear" -> Books.select { ((titleQuery) or (authorQuery) or (isbnQuery)) and (date1Year) and(userBooks)  }
-                    "all" -> Books.select { (titleQuery) or (authorQuery) or (isbnQuery) and(userBooks)  }
-                    else -> error("잘못된 날짜값: ")
-                }
-            }
-
-            // keyword 빈값 넣기
-
-            searchRequest.keyword != null -> {
-                Books.select {(titleQuery) or (authorQuery) or (isbnQuery) and(userBooks) }
-            }
-            else -> Books.select { userBooks }
         }
-
 
         val totalCount = query.count()
         println("토탈카운트: $totalCount")
@@ -296,8 +263,9 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
                     r[Books.isbn],
                     r[Books.categoryName],
                     r[Books.priceStandard].toString(),
-                    r[Books.quantity].toString(),
-                    r[Books.createdDate].toString()
+                    r[Books.currentQuantity].toString(),
+                    r[Books.createdDate].toString(),
+                    r[Books.isActive]
                 )
             }
 
@@ -305,6 +273,111 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
         PageImpl(content, PageRequest.of(searchRequest.page, searchRequest.size), totalCount)
 
     }
+
+
+
+
+
+//    @Auth
+//    @PostMapping("/paging/search") // 빈값 체크해야됨!!!!!
+//    fun searchPaging(@RequestBody searchRequest: SearchRequest,
+//                   @RequestAttribute authProfile: AuthProfile): Page<BookResponse>
+//            = transaction(Connection.TRANSACTION_READ_UNCOMMITTED, readOnly = true) {
+//
+//        println(searchRequest)
+////        val userBooks = Books.select{Books.profileId eq authProfile.id}.map{it[Books.id]}
+//        val userBooks = Books.profileId eq authProfile.id
+//        val titleQuery = Books.title like "%${searchRequest.keyword}"
+//        val authorQuery = Books.author like "%${searchRequest.keyword}"
+//        val isbnQuery= Books.isbn like "%${searchRequest.keyword}"
+//        val dateToday = Books.createdDate.date() eq LocalDate.now()
+//        val date6Month = Books.createdDate.date() greaterEq LocalDate.now().minusMonths(6)
+//        val date1Year = Books.createdDate.date() greaterEq LocalDate.now().minusYears(1)
+//
+//
+//
+//
+//        val query = when {
+//
+//            searchRequest.keyword != null && searchRequest.option != null  && searchRequest.date != null -> {
+//
+//                when(searchRequest.option) {
+//                    "title" -> {
+//                        when(searchRequest.date) {
+//                            "today" -> Books.select { (titleQuery) and (dateToday) and(userBooks) }
+//                            "sixMonth" -> Books.select { (titleQuery) and (date6Month) and(userBooks) }
+//                            "oneYear" -> Books.select { (titleQuery) and (date1Year) and(userBooks) }
+//                            "all" -> Books.select { (titleQuery) and(userBooks)  }
+//                            else -> error("잘못된 날짜값: ")
+//                        }
+//                    }
+//                    "author"-> {
+//                        when(searchRequest.date) {
+//                            "today" -> Books.select { (authorQuery) and (dateToday) and(userBooks)  }
+//                            "sixMonth" -> Books.select { (authorQuery) and (date6Month) and(userBooks) }
+//                            "oneYear" -> Books.select { (authorQuery) and (date1Year) and(userBooks) }
+//                            "all" -> Books.select { (authorQuery) and(userBooks) }
+//                            else -> error("잘못된 날짜값: ")
+//                        }
+//                    }
+//                    "isbn" -> {
+//                        when(searchRequest.date) {
+//                            "today" -> Books.select { (isbnQuery) and (dateToday) }
+//                            "sixMonth" -> Books.select { (isbnQuery) and (date6Month)}
+//                            "oneYear" -> Books.select { (isbnQuery) and (date1Year)}
+//                            "all" -> Books.select { (isbnQuery) and(userBooks) }
+//                            else -> error("잘못된 날짜값: ")
+//                        }
+//                    }
+//                    else -> error("잘못된 옵션값 : Invalid option")
+//                }
+//            }
+//
+//            searchRequest.keyword != null && searchRequest.date != null -> {
+//                when(searchRequest.date) {
+//                    "today" -> Books.select { ((titleQuery) or (authorQuery) or (isbnQuery)) and (dateToday) and(userBooks) }
+//                    "sixMonth" -> Books.select { ((titleQuery) or (authorQuery) or (isbnQuery)) and (date6Month) and(userBooks) }
+//                    "oneYear" -> Books.select { ((titleQuery) or (authorQuery) or (isbnQuery)) and (date1Year) and(userBooks)  }
+//                    "all" -> Books.select { (titleQuery) or (authorQuery) or (isbnQuery) and(userBooks)  }
+//                    else -> error("잘못된 날짜값: ")
+//                }
+//            }
+//
+//            // keyword 빈값 넣기
+//
+//            searchRequest.keyword != null -> {
+//                Books.select {(titleQuery) or (authorQuery) or (isbnQuery) and(userBooks) }
+//            }
+//            else -> Books.select { userBooks }
+//        }
+//
+//
+//        val totalCount = query.count()
+//        println("토탈카운트: $totalCount")
+//
+//        val content = query.orderBy(Books.id to SortOrder.DESC).limit(searchRequest.size,
+//            offset = (searchRequest.size * searchRequest.page).toLong())
+//            .map {r ->
+//                BookResponse(
+//                    r[Books.id],
+//                    r[Books.publisher],
+//                    r[Books.title],
+//                    r[Books.author],
+//                    r[Books.pubDate],
+//                    r[Books.isbn],
+//                    r[Books.categoryName],
+//                    r[Books.priceStandard].toString(),
+//                    r[Books.currentQuantity].toString(),
+//                    r[Books.createdDate].toString()
+//                )
+//            }
+//
+//        println("셀렉트한 컨텐트: $content")
+//        PageImpl(content, PageRequest.of(searchRequest.page, searchRequest.size), totalCount)
+//
+//    }
+
+
 
 
 

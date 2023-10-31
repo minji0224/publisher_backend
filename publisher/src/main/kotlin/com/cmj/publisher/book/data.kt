@@ -24,7 +24,8 @@ data class BookResponse(
     val categoryName : String,
     val priceStandard : String,
     val quantity : String,
-    val createdDate : String
+    val createdDate : String,
+    val isActive: Boolean,
 )
 
 // 큐로 관리자에게 보낼 객체
