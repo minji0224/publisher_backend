@@ -1,14 +1,10 @@
-package com.cmj.publisher.cummerce
+package com.cmj.publisher.sales
 
 import com.cmj.publisher.book.BookCreateMessage
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.stereotype.Service
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RestController
 
 
 @Service

@@ -2,14 +2,11 @@ package com.cmj.publisher.book
 
 import com.cmj.publisher.auth.Auth
 import com.cmj.publisher.auth.AuthProfile
-import com.cmj.publisher.auth.Profiles
 
-import com.cmj.publisher.cummerce.RabbitProducer
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.cmj.publisher.sales.RabbitProducer
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.like
 import org.jetbrains.exposed.sql.javatime.date
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -138,6 +135,22 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
 
             val fileResponse: BookFileResponse = insertedBookFile.first()
 
+            // 큐로 줄 객체
+            val bookCreateMessage = BookCreateMessage(
+                id = insertedBook[Books.id],
+                publisher = bookWithFileCreateRequest.publisher,
+                title = bookWithFileCreateRequest.title,
+                author = bookWithFileCreateRequest.author,
+                pubDate = bookWithFileCreateRequest.pubDate,
+                isbn = bookWithFileCreateRequest.isbn,
+                categoryName = bookWithFileCreateRequest.categoryName,
+                priceStandard = bookWithFileCreateRequest.priceStandard,
+                quantity = bookWithFileCreateRequest.quantity,
+                imageUuidName = uuidFileName
+            )
+            // 큐로 보내기
+            rabbitProducer.sendCreateBook(bookCreateMessage)
+
 
             return@transaction BookWithFileResponse(
                     id = insertedBook[Books.id],
@@ -153,21 +166,6 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
             )
         }
 
-        // 큐로 줄 객체
-        val bookCreateMessage = BookCreateMessage(
-            publisher = bookWithFileCreateRequest.publisher,
-            title = bookWithFileCreateRequest.title,
-            author = bookWithFileCreateRequest.author,
-            pubDate = bookWithFileCreateRequest.pubDate,
-            isbn = bookWithFileCreateRequest.isbn,
-            categoryName = bookWithFileCreateRequest.categoryName,
-            priceStandard = bookWithFileCreateRequest.priceStandard,
-            quantity = bookWithFileCreateRequest.quantity,
-        )
-
-        // 큐로 관리자에게 주기
-        // 파일도 같이 줘야됨.
-        rabbitProducer.sendCreateBook(bookCreateMessage)
         return ResponseEntity.status(HttpStatus.CREATED).body(result)
     }
 

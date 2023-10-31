@@ -1,6 +1,8 @@
 package com.cmj.publisher.book
 
 import com.cmj.publisher.auth.Profiles
+import com.cmj.publisher.book.BookSales
+import com.cmj.publisher.book.Books.autoIncrement
 import jakarta.annotation.PostConstruct
 import org.jetbrains.exposed.dao.id.LongIdTable
 import org.jetbrains.exposed.sql.Database
@@ -36,11 +38,18 @@ object BookFiles : LongIdTable("book_file") {
 }
 
 
-object BookSales : LongIdTable("book_sale") {
+object BookSales: Table("book_sales") {
+    val id = long("id").autoIncrement()
     val bookId = reference("book_id", Books.id)
-    val quantitySold = integer("quantity_sold")
+    val price = integer("price")
+    val salesQuantity = integer("sales_quantity")
+    val currentQuantity = integer("current_quantity")
     val saleDate = varchar("sale_date", 10)
+    override val primaryKey = PrimaryKey(id, name = "pk_sales_id")
 }
+
+
+
 
 
 
@@ -52,7 +61,7 @@ class BookTableSetup(private val database: Database) {
         // expose 라이버리에서는 모든 SQL 처리는
         // transaction 함수의 statement 람다함수 안에서 처리를 해야함
         transaction(database) {
-            SchemaUtils.createMissingTablesAndColumns(Books, BookFiles)
+            SchemaUtils.createMissingTablesAndColumns(Books, BookFiles, BookSales)
         }
     }
 }

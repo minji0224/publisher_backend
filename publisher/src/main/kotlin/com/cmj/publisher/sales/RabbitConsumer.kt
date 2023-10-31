@@ -1,4 +1,4 @@
-package com.cmj.publisher.cummerce
+package com.cmj.publisher.sales
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.springframework.amqp.rabbit.annotation.RabbitListener
