@@ -12,4 +12,9 @@ class ProductController(private val productService: ProductService) {
         println(productService.getCachedInventories())
         return productService.getCachedInventories()
     }
+
+//    @GetMapping("/sales")
+//    fun fetchInventories(): List<BookSalesResponse> {
+//        println(productService.get)
+//    }
 }

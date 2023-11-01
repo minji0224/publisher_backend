@@ -22,7 +22,6 @@ object Books : Table("book") {
     val isbn = varchar("isbn", 13)
     val categoryName = varchar("category_name", 255)
     val priceStandard = integer("price_standard")
-//    val quantity = integer("quantity")
     val initialQuantity = integer("initial_quantity")
     val currentQuantity = integer("current_quantity")
     val createdDate  = datetime("created_date")
@@ -42,9 +41,9 @@ object BookFiles : LongIdTable("book_file") {
 object BookSales: Table("book_sales") {
     val id = long("id").autoIncrement()
     val bookId = reference("book_id", Books.id)
+    val isbn = varchar("isbn", 13)
     val price = integer("price")
     val salesQuantity = integer("sales_quantity")
-    val currentQuantity = integer("current_quantity")
     val saleDate = varchar("sale_date", 10)
     override val primaryKey = PrimaryKey(id, name = "pk_sales_id")
 }

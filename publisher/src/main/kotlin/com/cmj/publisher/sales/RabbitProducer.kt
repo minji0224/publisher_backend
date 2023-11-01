@@ -12,6 +12,7 @@ class RabbitProducer(private val rabbitTemplate: RabbitTemplate) {
 
     private val mapper = jacksonObjectMapper()
 
+    // 큐로 관리자에게 신간 도서 보내기
     fun sendCreateBook(bookCreateMessage: BookCreateMessage) {
         rabbitTemplate.convertAndSend("create-book", mapper.writeValueAsString(bookCreateMessage))
     }
