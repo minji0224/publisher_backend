@@ -9,3 +9,13 @@ data class BookStocksMessageRes(
         val id: Long,
         val stocks: Long,
 )
+
+data class PieChartResponse(
+        val title: String,
+        val author: String,
+        val bookId: Long,
+        val isbn : String,
+        val priceSales : Int,
+        val totalCount : Int,
+        val saleDate : String,
+)

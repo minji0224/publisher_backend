@@ -23,9 +23,14 @@ data class InventoryResponse (
 
 // 하루에 한번씩 관리자로부터 레디스로 판매통계 받을 곳
 data class BookSalesResponse(
-    val id : Long,
-    val isbn : String,
-    val price : Long,
-    val salesQuantity : Int,
-    val saleDate : String,
+        val isbn : String,
+        val priceSales : Int,
+        val count : Int,
+        val saleDate : String,
+    // 관리자쪽에서 날짜를 LocalDate값으로 보내줘야 디비안꼬임
+)
+
+data class BookIdAndDate(
+        val bookId: Long,
+        val bookDated: String,
 )

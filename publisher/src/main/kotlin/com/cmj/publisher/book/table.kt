@@ -39,13 +39,11 @@ object BookFiles : LongIdTable("book_file") {
 
 
 object BookSales: Table("book_sales") {
-    val id = long("id").autoIncrement()
     val bookId = reference("book_id", Books.id)
     val isbn = varchar("isbn", 13)
-    val price = integer("price")
-    val salesQuantity = integer("sales_quantity")
-    val saleDate = varchar("sale_date", 10)
-    override val primaryKey = PrimaryKey(id, name = "pk_sales_id")
+    val priceSales = integer("price_sales")
+    val count = integer("count")
+    val saleDate = varchar("sale_date",50)
 }
 
 
