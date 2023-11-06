@@ -2,6 +2,7 @@ package com.cmj.publisher.sales
 
 import com.cmj.publisher.auth.Auth
 import com.cmj.publisher.auth.AuthProfile
+import com.cmj.publisher.book.BookFiles
 import com.cmj.publisher.book.BookSales
 import com.cmj.publisher.book.Books
 import org.jetbrains.exposed.sql.*
@@ -22,17 +23,18 @@ class testController() {
         println(authProfile)
 
         val result = transaction {
-            BookSales.innerJoin(Books).slice(
+            BookSales.innerJoin(Books).leftJoin(BookFiles).slice(
                 BookSales.bookId,
                 BookSales.isbn,
                 BookSales.priceSales,
                 BookSales.count.sum().alias("total_count"),
                 Books.title,
-                Books.author
+                Books.author,
+                BookFiles.uuidFileName
             )
                 .select { (BookSales.saleDate greaterEq LocalDateTime.now().withDayOfMonth(1).toLocalDate()) and
                         (BookSales.saleDate lessEq LocalDateTime.now().toLocalDate()) }
-                .groupBy(BookSales.bookId, BookSales.isbn, BookSales.priceSales, Books.title, Books.author)
+                .groupBy(BookSales.bookId, BookSales.isbn, BookSales.priceSales, Books.title, Books.author, BookFiles.uuidFileName)
                     .orderBy(BookSales.count.sum(), SortOrder.DESC)
                         .limit(5).map{ r ->
                             PieChartResponse(
@@ -41,7 +43,8 @@ class testController() {
                                         bookId = r[BookSales.bookId],
                                         isbn = r[BookSales.isbn],
                                         priceSales = r[BookSales.priceSales],
-                                        totalCount = r[BookSales.count.sum()]?: 0
+                                        totalCount = r[BookSales.count.sum()]?: 0,
+                                        uuidFilename = r[BookFiles.uuidFileName]?: ""
                                 )
                             }
         }
@@ -50,9 +53,10 @@ class testController() {
         return result
     }
 
-
+    @Auth
     @GetMapping("/lineChart") // 오늘기준으로 어제날짜부터 7일
-    fun getLineChart(): List<LineChartResponse> {
+    fun getLineChart(@RequestAttribute authProfile: AuthProfile): List<LineChartResponse> {
+        println(authProfile)
 
         val result = transaction {
             BookSales.slice(BookSales.saleDate,
@@ -60,7 +64,7 @@ class testController() {
                 BookSales.count.sum().alias("total_count"),)
                 .select { BookSales.saleDate greater LocalDateTime.now().minusDays(7).toLocalDate() }
                 .groupBy(BookSales.saleDate)
-                .orderBy((BookSales.priceSales * BookSales.count).sum(), SortOrder.DESC)
+                .orderBy(BookSales.saleDate, SortOrder.ASC)
                 .limit(7)
                 .map { r ->
                     LineChartResponse(
