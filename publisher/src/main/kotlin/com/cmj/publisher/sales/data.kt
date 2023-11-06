@@ -17,5 +17,10 @@ data class PieChartResponse(
         val isbn : String,
         val priceSales : Int,
         val totalCount : Int,
+)
+
+data class LineChartResponse(
         val saleDate : String,
+        val totalCount : Int,
+        val totalPrice: Int,
 )

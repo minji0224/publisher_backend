@@ -21,6 +21,7 @@ class testService(private val testClient: testClient,
 
     // 관리자쪽에서 날짜를 LocalDate값으로 보내줘야 디비안꼬임
     // 하루에 한번씩 돌게 만들기
+    // 업데이트될때는 count합산되게 하기?
     @Scheduled(fixedRate = 1000 * 60 * 60)
     fun fetchSales() {
 
