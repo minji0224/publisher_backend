@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.RestController
 import java.time.LocalDateTime
 
 @RestController
-@RequestMapping("/test")
-class testController() {
+@RequestMapping("/chart")
+class ChartController() {
     @Auth
     @GetMapping("/pieChart") // 오늘기준으로 이번달
     fun getPieChart(@RequestAttribute authProfile: AuthProfile): List<PieChartResponse>  {
@@ -33,7 +33,8 @@ class testController() {
                 BookFiles.uuidFileName
             )
                 .select { (BookSales.saleDate greaterEq LocalDateTime.now().withDayOfMonth(1).toLocalDate()) and
-                        (BookSales.saleDate lessEq LocalDateTime.now().toLocalDate()) }
+                        (BookSales.saleDate lessEq LocalDateTime.now().toLocalDate()) and
+                        (Books.profileId eq authProfile.id)}
                 .groupBy(BookSales.bookId, BookSales.isbn, BookSales.priceSales, Books.title, Books.author, BookFiles.uuidFileName)
                     .orderBy(BookSales.count.sum(), SortOrder.DESC)
                         .limit(5).map{ r ->
@@ -59,10 +60,11 @@ class testController() {
         println(authProfile)
 
         val result = transaction {
-            BookSales.slice(BookSales.saleDate,
+            BookSales.innerJoin(Books).slice(BookSales.saleDate,
                 (BookSales.priceSales * BookSales.count).sum().alias("total_price"),
                 BookSales.count.sum().alias("total_count"),)
-                .select { BookSales.saleDate greater LocalDateTime.now().minusDays(7).toLocalDate() }
+                .select { BookSales.saleDate greater LocalDateTime.now().minusDays(7).toLocalDate() and
+                        (Books.profileId eq authProfile.id)}
                 .groupBy(BookSales.saleDate)
                 .orderBy(BookSales.saleDate, SortOrder.ASC)
                 .limit(7)

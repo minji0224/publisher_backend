@@ -14,8 +14,8 @@ import org.springframework.stereotype.Service
 
 // redis는 key-value값으로 저장
 @Service
-class testService(private val testClient: testClient,
-                  private val redisTemplate: RedisTemplate<String, String> ) {
+class ChartService(private val ChartClient: ChartClient,
+                   private val redisTemplate: RedisTemplate<String, String> ) {
 
     private val mapper = jacksonObjectMapper()
 
@@ -26,7 +26,7 @@ class testService(private val testClient: testClient,
     fun fetchSales() {
 
         redisTemplate.delete("my-queue")
-        redisTemplate.opsForValue().set("my-queue", mapper.writeValueAsString(testClient.getSalesBooks()))
+        redisTemplate.opsForValue().set("my-queue", mapper.writeValueAsString(ChartClient.getSalesBooks()))
 
         val result = redisTemplate.opsForValue().get("my-queue")
         println("스케줄업뎃 이후 큐에서 가져온 값: $result")

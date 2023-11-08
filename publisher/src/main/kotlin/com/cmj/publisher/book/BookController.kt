@@ -40,7 +40,7 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
         val books = transaction {
             Books.select { Books.profileId eq authProfile.id }.map{ r -> BookResponse(
                     r[Books.id], r[Books.publisher], r[Books.title], r[Books.author], r[Books.pubDate], r[Books.isbn],
-                    r[Books.categoryName], r[Books.priceStandard].toString(), r[Books.currentQuantity].toString(), r[Books.createdDate].toString(),
+                    r[Books.categoryName], r[Books.priceStandard].toString(), r[Books.currentQuantity].toString(), r[Books.createdDate].toLocalDate().toString(),
                 r[Books.isActive]
             )}
         }
@@ -64,6 +64,7 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
         val totalCount = Books.select{Books.profileId eq authProfile.id}.count()
         return@transaction PageImpl(content, PageRequest.of(page, size), totalCount)
     }
+
 
 
     @Auth
@@ -174,31 +175,13 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
     }
 
 
-    @Auth
-    @GetMapping("/file/{bookId}/{uuidFilename}")
-    fun downloadFile(@PathVariable bookId: Long, @PathVariable uuidFilename: String,
-                     @RequestAttribute authProfile: AuthProfile) : ResponseEntity<Any> {
-        println(authProfile)
 
-        val bookId = transaction {
-            (Books innerJoin BookFiles).select { (Books.id eq bookId) and (BookFiles.uuidFileName eq uuidFilename) }
-                .map { r ->
-                    BookFileResponse (
-                        id = r[BookFiles.id].value,
-                        bookId = r[BookFiles.bookId],
-                        uuidFileName = r[BookFiles.uuidFileName],
-                        originalFileName = r[BookFiles.originalFileName],
-                        contentType = r[BookFiles.contentType]
-                    )
-                }.firstOrNull()
-        }
-        bookId?.let { println(it.bookId) }
 
-        if(bookId == null) {
-            return ResponseEntity.status(404).build()
-        }
+    @GetMapping("/file/{uuidFilename}")
+    fun downloadFile(@PathVariable uuidFilename: String) : ResponseEntity<Any> {
 
-        val filePath = Paths.get("$BOOK_FILE_PATH/${bookId.uuidFileName}").toFile()
+
+        val filePath = Paths.get("$BOOK_FILE_PATH/$uuidFilename").toFile()
 
         if(!filePath.exists()) {
             return ResponseEntity.status(404).build()
@@ -215,13 +198,13 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
 
     @Auth
     @PostMapping("/paging/search") // 빈값 체크해야됨!!!!!
-    fun searchPagingTest(@RequestBody searchRequest: SearchRequest,
-                         @RequestAttribute authProfile: AuthProfile): Page<BookResponse>
+    fun searchPaging(@RequestBody searchRequest: SearchRequest,
+                     @RequestAttribute authProfile: AuthProfile): Page<BookResponse>
             = transaction(Connection.TRANSACTION_READ_UNCOMMITTED, readOnly = true) {
 
         println(searchRequest)
         val userBooks = Books.profileId eq authProfile.id
-        val keyword = "%${searchRequest.keyword}"
+        val keyword = "%${searchRequest.keyword}%"
 
         val dateToday = Books.createdDate.date() eq LocalDate.now()
         val date6Month = Books.createdDate.date() greaterEq LocalDate.now().minusMonths(6)
