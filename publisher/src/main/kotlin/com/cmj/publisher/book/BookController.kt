@@ -32,22 +32,6 @@ import org.springframework.core.io.ResourceLoader
 class BookController(private val rabbitProducer: RabbitProducer, private val resourceLoader: ResourceLoader, ) {
     private val BOOK_FILE_PATH = "file/book";
 
-    @Auth
-    @GetMapping
-    fun fetch(@RequestAttribute authProfile: AuthProfile) :List<BookResponse> {
-
-        println("북패처")
-        val books = transaction {
-            Books.select { Books.profileId eq authProfile.id }.map{ r -> BookResponse(
-                    r[Books.id], r[Books.publisher], r[Books.title], r[Books.author], r[Books.pubDate], r[Books.isbn],
-                    r[Books.categoryName], r[Books.priceStandard].toString(), r[Books.currentQuantity].toString(), r[Books.createdDate].toLocalDate().toString(),
-                r[Books.isActive]
-            )}
-        }
-        println(books.size)
-        return books
-    }
-
 
     @Auth
     @GetMapping("/paging")
@@ -57,7 +41,7 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
             .limit(size, offset = (size * page).toLong()).map {
                 r -> BookResponse(
             r[Books.id], r[Books.publisher], r[Books.title], r[Books.author], r[Books.pubDate], r[Books.isbn],
-            r[Books.categoryName], r[Books.priceStandard].toString(), r[Books.currentQuantity].toString(), r[Books.createdDate].toString(),
+            r[Books.categoryName], r[Books.priceStandard].toString(), r[Books.currentQuantity].toString(), r[Books.createdDate].toLocalDate().toString(),
                     r[Books.isActive]
                 )
         }
@@ -203,6 +187,7 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
             = transaction(Connection.TRANSACTION_READ_UNCOMMITTED, readOnly = true) {
 
         println(searchRequest)
+        println("페이징")
         val userBooks = Books.profileId eq authProfile.id
         val keyword = "%${searchRequest.keyword}%"
 

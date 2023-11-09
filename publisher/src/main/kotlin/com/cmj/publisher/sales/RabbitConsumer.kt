@@ -45,6 +45,11 @@ class RabbitConsumer {
         }
     }
 
+    @RabbitListener(queues = ["create-order"])
+    fun test(message: String) {
+        println("레빗테스트: $message")
+    }
+
 
 }
 

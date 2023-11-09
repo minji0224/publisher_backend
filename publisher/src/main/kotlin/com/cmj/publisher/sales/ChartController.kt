@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestAttribute
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.time.DayOfWeek
 import java.time.LocalDateTime
 
 @RestController
@@ -57,13 +58,15 @@ class ChartController() {
     @Auth
     @GetMapping("/lineChart") // 오늘기준으로 어제날짜부터 7일
     fun getLineChart(@RequestAttribute authProfile: AuthProfile): List<LineChartResponse> {
+        println("라인차트")
         println(authProfile)
 
         val result = transaction {
             BookSales.innerJoin(Books).slice(BookSales.saleDate,
                 (BookSales.priceSales * BookSales.count).sum().alias("total_price"),
                 BookSales.count.sum().alias("total_count"),)
-                .select { BookSales.saleDate greater LocalDateTime.now().minusDays(7).toLocalDate() and
+                .select { BookSales.saleDate greaterEq LocalDateTime.now().minusDays(7).toLocalDate() and
+                        (BookSales.saleDate lessEq LocalDateTime.now().minusDays(1).toLocalDate()) and
                         (Books.profileId eq authProfile.id)}
                 .groupBy(BookSales.saleDate)
                 .orderBy(BookSales.saleDate, SortOrder.ASC)
@@ -81,4 +84,5 @@ class ChartController() {
         return result
 
     }
+
 }
