@@ -1,4 +1,4 @@
-package com.cmj.publisher.sales
+package com.cmj.publisher.chart
 
 import com.cmj.publisher.auth.Auth
 import com.cmj.publisher.auth.AuthProfile
@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestAttribute
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import java.time.DayOfWeek
 import java.time.LocalDateTime
 
 @RestController

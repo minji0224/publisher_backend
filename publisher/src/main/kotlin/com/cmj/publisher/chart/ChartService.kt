@@ -1,8 +1,8 @@
-package com.cmj.publisher.sales
+package com.cmj.publisher.chart
 
 import com.cmj.publisher.book.BookSales
 import com.cmj.publisher.book.Books
-import com.cmj.publisher.product.BookSalesResponse
+import com.cmj.publisher.chart.BookSalesMessageResponse
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.jetbrains.exposed.sql.*
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service
 
 // redis는 key-value값으로 저장
 @Service
-class ChartService(private val ChartClient: ChartClient,
+class ChartService(private val chartClient: ChartClient,
                    private val redisTemplate: RedisTemplate<String, String> ) {
 
     private val mapper = jacksonObjectMapper()
@@ -22,18 +22,18 @@ class ChartService(private val ChartClient: ChartClient,
     // 관리자쪽에서 날짜를 LocalDate값으로 보내줘야 디비안꼬임
     // 하루에 한번씩 돌게 만들기
     // 업데이트될때는 count합산되게 하기?
-    @Scheduled(fixedRate = 1000 * 60 * 60)
+//    @Scheduled(fixedRate = 1000 * 60 * 60)
     fun fetchSales() {
 
         redisTemplate.delete("my-queue")
-        redisTemplate.opsForValue().set("my-queue", mapper.writeValueAsString(ChartClient.getSalesBooks()))
+        redisTemplate.opsForValue().set("my-queue", mapper.writeValueAsString(chartClient.getSalesBooks()))
 
         val result = redisTemplate.opsForValue().get("my-queue")
         println("스케줄업뎃 이후 큐에서 가져온 값: $result")
         // 1. 레디스 큐에 있는 값이 존재하면 디비 작업 시작
         if (result != null) {
 
-            val list: List<BookSalesResponse> = mapper.readValue(result)
+            val list: List<BookSalesMessageResponse> = mapper.readValue(result)
 
             transaction {
                 try {

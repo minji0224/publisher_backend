@@ -1,14 +1,5 @@
-package com.cmj.publisher.sales
+package com.cmj.publisher.chart
 
-data class BookActiveMessageRes(
-        val id: Long,
-        val isActive: Boolean
-)
-
-data class BookStocksMessageRes(
-        val id: Long,
-        val stocks: Long,
-)
 
 data class PieChartResponse(
         val title: String,
@@ -25,3 +16,13 @@ data class LineChartResponse(
         val totalCount : Int,
         val totalPrice: Int,
 )
+
+data class BookSalesMessageResponse(
+        val isbn : String,
+        val priceSales : Int,
+        val count : Int,
+        val saleDate : String,
+        // 관리자쪽에서 날짜를 LocalDate값으로 보내줘야 디비안꼬임
+)
+
+

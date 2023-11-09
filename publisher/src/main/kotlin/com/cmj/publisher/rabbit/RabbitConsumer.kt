@@ -1,19 +1,18 @@
-package com.cmj.publisher.sales
+package com.cmj.publisher.rabbit
 
 import com.cmj.publisher.book.Books
+import com.cmj.publisher.rabbit.BookActiveMessageRes
+import com.cmj.publisher.rabbit.BookStocksMessageRes
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
-import org.springframework.amqp.core.Message
 import org.springframework.amqp.rabbit.annotation.RabbitListener
 import org.springframework.stereotype.Service
 
-import org.springframework.amqp.core.MessageProperties
-
-
+// 여러 상대방 서버의 큐를 읽어오려면 레빗컨피그를 만들어서 호스트주소 및 패스워드 설정하기
+// 지금은 내 서버에서 다른 포트로만 주고 받고 있음.
+// 리슨 할 상대방 서버주소 필요!
 @Service
 class RabbitConsumer {
     private val mapper = jacksonObjectMapper()
@@ -22,7 +21,7 @@ class RabbitConsumer {
     @RabbitListener(queues = ["my-queue"]) // 큐 정하기
     fun bookStocksReceive(message: String) {
         println("관리자가 큐로 보낸 도서 재고: $message")
-        val bookStocks :BookStocksMessageRes = mapper.readValue(message)
+        val bookStocks : BookStocksMessageRes = mapper.readValue(message)
         println(bookStocks)
 
         transaction {
@@ -45,10 +44,6 @@ class RabbitConsumer {
         }
     }
 
-    @RabbitListener(queues = ["create-order"])
-    fun test(message: String) {
-        println("레빗테스트: $message")
-    }
 
 
 }
