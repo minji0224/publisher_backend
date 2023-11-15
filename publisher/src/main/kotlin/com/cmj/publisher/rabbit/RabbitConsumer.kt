@@ -8,6 +8,8 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import org.springframework.amqp.rabbit.annotation.RabbitListener
+import org.springframework.amqp.support.AmqpHeaders
+import org.springframework.messaging.handler.annotation.Header
 import org.springframework.stereotype.Service
 
 // 여러 상대방 서버의 큐를 읽어오려면 레빗컨피그를 만들어서 호스트주소 및 패스워드 설정하기
@@ -31,7 +33,6 @@ class RabbitConsumer {
         }
     }
 
-
     @RabbitListener(queues = ["my-queue"]) // 도서몰 등록 여부 받을 곳 정하기
     fun bookActiveReceive(message: String) {
         println("관리자가 큐로 보낸 도서몰 등록 여부: $message")
@@ -43,7 +44,6 @@ class RabbitConsumer {
             }
         }
     }
-
 
 
 }

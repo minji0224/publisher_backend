@@ -4,7 +4,7 @@ import com.cmj.publisher.chart.BookSalesMessageResponse
 import org.springframework.cloud.openfeign.FeignClient
 import org.springframework.web.bind.annotation.GetMapping
 
-@FeignClient(name = "testClient", url="http://192.168.100.155:8082/test")
+@FeignClient(name = "productClient", url="http://192.168.100.155:8082/product")
 interface ChartClient {
 
 

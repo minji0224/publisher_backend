@@ -231,7 +231,7 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
                     r[Books.categoryName],
                     r[Books.priceStandard].toString(),
                     r[Books.currentQuantity].toString(),
-                    r[Books.createdDate].toString(),
+                    r[Books.createdDate].toLocalDate().toString(),
                     r[Books.isActive]
                 )
             }
