@@ -4,6 +4,9 @@ import com.cmj.publisher.auth.Auth
 import com.cmj.publisher.auth.AuthProfile
 
 import com.cmj.publisher.rabbit.RabbitProducer
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.greaterEq
@@ -26,12 +29,14 @@ import java.time.LocalDateTime
 import java.util.*
 import org.springframework.core.io.ResourceLoader
 
+@Tag(name = "도서 관리 API")
 @RestController
 @RequestMapping("/books")
 class BookController(private val rabbitProducer: RabbitProducer, private val resourceLoader: ResourceLoader, ) {
     private val BOOK_FILE_PATH = "file/book";
 
 
+    @Operation(summary = "등록된 도서 전체 조회", security = [SecurityRequirement(name = "bearer-key")])
     @Auth
     @GetMapping("/paging")
     fun paging(@RequestParam size: Int, @RequestParam page: Int, @RequestAttribute authProfile: AuthProfile )
@@ -49,7 +54,7 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
     }
 
 
-
+    @Operation(summary = "신간 도서 등록", security = [SecurityRequirement(name = "bearer-key")])
     @Auth
     @PostMapping("/with-file")
     fun createWithFile(@RequestPart(name = "createRequest") bookWithFileCreateRequest: BookWithFileCreateRequest,
@@ -160,6 +165,7 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
 
 
 
+    @Operation(summary = "해당 도서의 이미지파일 조회")
     @GetMapping("/file/{uuidFilename}")
     fun downloadFile(@PathVariable uuidFilename: String) : ResponseEntity<Any> {
 
@@ -179,8 +185,9 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
     }
 
 
+    @Operation(summary = "등록된 도서 검색", security = [SecurityRequirement(name = "bearer-key")])
     @Auth
-    @PostMapping("/paging/search") // 빈값 체크해야됨!!!!!
+    @PostMapping("/paging/search")
     fun searchPaging(@RequestBody searchRequest: SearchRequest,
                      @RequestAttribute authProfile: AuthProfile): Page<BookResponse>
             = transaction(Connection.TRANSACTION_READ_UNCOMMITTED, readOnly = true) {

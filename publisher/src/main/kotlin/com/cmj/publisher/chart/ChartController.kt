@@ -5,6 +5,9 @@ import com.cmj.publisher.auth.AuthProfile
 import com.cmj.publisher.book.BookFiles
 import com.cmj.publisher.book.BookSales
 import com.cmj.publisher.book.Books
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.times
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -14,9 +17,11 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.time.LocalDateTime
 
+@Tag(name = "통계 차트 API")
 @RestController
 @RequestMapping("/chart")
 class ChartController() {
+    @Operation(summary = "최근 한달동안 판매건 통계", security = [SecurityRequirement(name = "bearer-key")])
     @Auth
     @GetMapping("/pieChart") // 오늘기준으로 이번달
     fun getPieChart(@RequestAttribute authProfile: AuthProfile): List<PieChartResponse>  {
@@ -54,6 +59,7 @@ class ChartController() {
         return result
     }
 
+    @Operation(summary = "최근 일주일간 총 판매금액 통계", security = [SecurityRequirement(name = "bearer-key")])
     @Auth
     @GetMapping("/lineChart") // 오늘기준으로 어제날짜부터 7일
     fun getLineChart(@RequestAttribute authProfile: AuthProfile): List<LineChartResponse> {

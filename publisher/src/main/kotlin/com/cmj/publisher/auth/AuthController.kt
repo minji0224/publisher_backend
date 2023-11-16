@@ -1,6 +1,8 @@
 package com.cmj.publisher.auth
 
 import com.cmj.publisher.auth.util.JwtUtil
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.HttpStatus
@@ -12,10 +14,12 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder
 
+@Tag(name = "인증 관련 API")
 @RestController
 @RequestMapping("/auth")
 class AuthController(private val authService: AuthService) {
 
+    @Operation(summary = "회원가입")
     @PostMapping(value = ["/signup"])
     fun signUp(@RequestBody signupRequest: SignupRequest): ResponseEntity<Long> {
         println(signupRequest)
@@ -39,6 +43,7 @@ class AuthController(private val authService: AuthService) {
         }
     }
 
+    @Operation(summary = "로그인")
     @PostMapping(value = ["/signin"])
     fun signIn(@RequestParam publisherName: String, @RequestParam password: String,
                httpServletResponse: HttpServletResponse,) : ResponseEntity<*> {
