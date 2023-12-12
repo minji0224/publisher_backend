@@ -1,4 +1,4 @@
-package com.cmj.publisher.chart
+package com.cmj.publisher.sales
 
 import com.cmj.publisher.auth.Auth
 import com.cmj.publisher.auth.AuthProfile
@@ -15,11 +15,12 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestAttribute
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 @Tag(name = "통계 차트 API")
 @RestController
-@RequestMapping("/chart")
+@RequestMapping("/api/chart")
 class ChartController() {
     @Operation(summary = "최근 한달동안 판매건 통계", security = [SecurityRequirement(name = "bearer-key")])
     @Auth
@@ -50,7 +51,7 @@ class ChartController() {
                                         isbn = r[BookSales.isbn],
                                         priceSales = r[BookSales.priceSales],
                                         totalCount = r[BookSales.count.sum()]?: 0,
-                                        uuidFilename = r[BookFiles.uuidFileName]?: ""
+                                        uuidFilename = r[BookFiles.uuidFileName]?: "defaultFilename"
                                 )
                             }
         }
@@ -70,7 +71,7 @@ class ChartController() {
             BookSales.innerJoin(Books).slice(BookSales.saleDate,
                 (BookSales.priceSales * BookSales.count).sum().alias("total_price"),
                 BookSales.count.sum().alias("total_count"),)
-                .select { BookSales.saleDate greaterEq LocalDateTime.now().minusDays(7).toLocalDate() and
+                .select { (BookSales.saleDate greaterEq LocalDateTime.now().minusDays(7).toLocalDate()) and
                         (BookSales.saleDate lessEq LocalDateTime.now().minusDays(1).toLocalDate()) and
                         (Books.profileId eq authProfile.id)}
                 .groupBy(BookSales.saleDate)

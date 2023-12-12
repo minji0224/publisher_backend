@@ -31,25 +31,26 @@ import org.springframework.core.io.ResourceLoader
 
 @Tag(name = "도서 관리 API")
 @RestController
-@RequestMapping("/books")
-class BookController(private val rabbitProducer: RabbitProducer, private val resourceLoader: ResourceLoader, ) {
-    private val BOOK_FILE_PATH = "file/book";
+@RequestMapping("/api/books")
+class BookController(private val rabbitProducer: RabbitProducer,
+                     private val resourceLoader: ResourceLoader, ) {
+    private val BOOK_FILE_PATH = "tmp/file/book";
 
 
     @Operation(summary = "등록된 도서 전체 조회", security = [SecurityRequirement(name = "bearer-key")])
     @Auth
     @GetMapping("/paging")
-    fun paging(@RequestParam size: Int, @RequestParam page: Int, @RequestAttribute authProfile: AuthProfile )
-    : Page<BookResponse> = transaction (Connection.TRANSACTION_READ_UNCOMMITTED, readOnly = true) {
-        val content = Books.select{Books.profileId eq authProfile.id}.orderBy(Books.id to SortOrder.DESC)
-            .limit(size, offset = (size * page).toLong()).map {
-                r -> BookResponse(
-            r[Books.id], r[Books.publisher], r[Books.title], r[Books.author], r[Books.pubDate], r[Books.isbn],
-            r[Books.categoryName], r[Books.priceStandard].toString(), r[Books.currentQuantity].toString(), r[Books.createdDate].toLocalDate().toString(),
-                    r[Books.isActive]
-                )
-        }
-        val totalCount = Books.select{Books.profileId eq authProfile.id}.count()
+    fun paging(@RequestParam size: Int, @RequestParam page: Int, @RequestAttribute authProfile: AuthProfile)
+            : Page<BookResponse> = transaction(Connection.TRANSACTION_READ_UNCOMMITTED, readOnly = true) {
+        val content = Books.select { Books.profileId eq authProfile.id }.orderBy(Books.id to SortOrder.DESC)
+                .limit(size, offset = (size * page).toLong()).map { r ->
+                    BookResponse(
+                            r[Books.id], r[Books.publisher], r[Books.title], r[Books.author], r[Books.pubDate], r[Books.isbn],
+                            r[Books.categoryName], r[Books.priceStandard].toString(), r[Books.currentQuantity].toString(), r[Books.createdDate].toLocalDate().toString(),
+                            r[Books.isActive]
+                    )
+                }
+        val totalCount = Books.select { Books.profileId eq authProfile.id }.count()
         return@transaction PageImpl(content, PageRequest.of(page, size), totalCount)
     }
 
@@ -59,14 +60,14 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
     @PostMapping("/with-file")
     fun createWithFile(@RequestPart(name = "createRequest") bookWithFileCreateRequest: BookWithFileCreateRequest,
                        @RequestAttribute authProfile: AuthProfile,
-                       @RequestPart ("file") file: MultipartFile) :ResponseEntity<BookWithFileResponse> {
+                       @RequestPart("file") file: MultipartFile): ResponseEntity<BookWithFileResponse> {
 
 
         println("확인")
         println(bookWithFileCreateRequest.title)
 
         val dirPath = Paths.get(BOOK_FILE_PATH)
-        if(!Files.exists(dirPath)) {
+        if (!Files.exists(dirPath)) {
             Files.createDirectories(dirPath) //폴더 생성
         }
 
@@ -87,9 +88,9 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
 
         // 파일의 메타데이터를 리스트-맵에 임시 저장
         fileList.add(mapOf(
-            "uuidFileName" to uuidFileName,
-            "contentType" to file.contentType,
-            "originalFileName" to file.originalFilename
+                "uuidFileName" to uuidFileName,
+                "contentType" to file.contentType,
+                "originalFileName" to file.originalFilename
         ))
 
         val result = transaction {
@@ -116,7 +117,7 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
             }
 
 
-            val insertedBookFile = BookFiles.select{BookFiles.bookId eq insertedBook[Books.id]}.map { r ->
+            val insertedBookFile = BookFiles.select { BookFiles.bookId eq insertedBook[Books.id] }.map { r ->
                 BookFileResponse(
                         id = r[BookFiles.id].value,
                         bookId = insertedBook[Books.id],
@@ -130,16 +131,16 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
 
             // 큐로 줄 객체
             val bookCreateMessage = BookCreateMessage(
-                id = insertedBook[Books.id],
-                publisher = bookWithFileCreateRequest.publisher,
-                title = bookWithFileCreateRequest.title,
-                author = bookWithFileCreateRequest.author,
-                pubDate = bookWithFileCreateRequest.pubDate,
-                isbn = bookWithFileCreateRequest.isbn,
-                categoryName = bookWithFileCreateRequest.categoryName,
-                priceStandard = bookWithFileCreateRequest.priceStandard,
-                quantity = bookWithFileCreateRequest.quantity,
-                imageUuidName = uuidFileName
+                    id = insertedBook[Books.id],
+                    publisher = bookWithFileCreateRequest.publisher,
+                    title = bookWithFileCreateRequest.title,
+                    author = bookWithFileCreateRequest.author,
+                    pubDate = bookWithFileCreateRequest.pubDate,
+                    isbn = bookWithFileCreateRequest.isbn,
+                    categoryName = bookWithFileCreateRequest.categoryName,
+                    priceStandard = bookWithFileCreateRequest.priceStandard,
+                    quantity = bookWithFileCreateRequest.quantity,
+                    imageUuidName = uuidFileName
             )
             // 큐로 보내기
             rabbitProducer.sendCreateBook(bookCreateMessage)
@@ -163,16 +164,14 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
     }
 
 
-
-
     @Operation(summary = "해당 도서의 이미지파일 조회")
     @GetMapping("/file/{uuidFilename}")
-    fun downloadFile(@PathVariable uuidFilename: String) : ResponseEntity<Any> {
+    fun downloadFile(@PathVariable uuidFilename: String): ResponseEntity<Any> {
 
 
         val filePath = Paths.get("$BOOK_FILE_PATH/$uuidFilename").toFile()
 
-        if(!filePath.exists()) {
+        if (!filePath.exists()) {
             return ResponseEntity.status(404).build()
         }
 
@@ -189,13 +188,13 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
     @Auth
     @PostMapping("/paging/search")
     fun searchPaging(@RequestBody searchRequest: SearchRequest,
-                     @RequestAttribute authProfile: AuthProfile): Page<BookResponse>
-            = transaction(Connection.TRANSACTION_READ_UNCOMMITTED, readOnly = true) {
+                     @RequestAttribute authProfile: AuthProfile): Page<BookResponse> = transaction(Connection.TRANSACTION_READ_UNCOMMITTED, readOnly = true) {
 
         println(searchRequest)
         println("페이징")
         val userBooks = Books.profileId eq authProfile.id
         val keyword = "%${searchRequest.keyword}%"
+        // 띄어쓰기 및 대소문자변환은 안함
 
         val dateToday = Books.createdDate.date() eq LocalDate.now()
         val date6Month = Books.createdDate.date() greaterEq LocalDate.now().minusMonths(6)
@@ -203,9 +202,9 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
 
 
         val query = Books.select {
-            userBooks and when{
+            userBooks and when {
                 !searchRequest.keyword.isNullOrEmpty() -> {
-                    when(searchRequest.option) {
+                    when (searchRequest.option) {
                         "title" -> Books.title like keyword
                         "author" -> Books.author like keyword
                         "isbn" -> Books.isbn like keyword
@@ -214,7 +213,7 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
                 }
                 // keyword가 nullOrEmpty 경우
                 else -> Op.TRUE
-            } and when(searchRequest.date) {
+            } and when (searchRequest.date) {
                 "today" -> dateToday
                 "sixMonth" -> date6Month
                 "oneYear" -> date1Year
@@ -226,31 +225,27 @@ class BookController(private val rabbitProducer: RabbitProducer, private val res
         println("토탈카운트: $totalCount")
 
         val content = query.orderBy(Books.id to SortOrder.DESC).limit(searchRequest.size,
-            offset = (searchRequest.size * searchRequest.page).toLong())
-            .map {r ->
-                BookResponse(
-                    r[Books.id],
-                    r[Books.publisher],
-                    r[Books.title],
-                    r[Books.author],
-                    r[Books.pubDate],
-                    r[Books.isbn],
-                    r[Books.categoryName],
-                    r[Books.priceStandard].toString(),
-                    r[Books.currentQuantity].toString(),
-                    r[Books.createdDate].toLocalDate().toString(),
-                    r[Books.isActive]
-                )
-            }
+                offset = (searchRequest.size * searchRequest.page).toLong())
+                .map { r ->
+                    BookResponse(
+                            r[Books.id],
+                            r[Books.publisher],
+                            r[Books.title],
+                            r[Books.author],
+                            r[Books.pubDate],
+                            r[Books.isbn],
+                            r[Books.categoryName],
+                            r[Books.priceStandard].toString(),
+                            r[Books.currentQuantity].toString(),
+                            r[Books.createdDate].toLocalDate().toString(),
+                            r[Books.isActive]
+                    )
+                }
 
         println("셀렉트한 컨텐트: $content")
         PageImpl(content, PageRequest.of(searchRequest.page, searchRequest.size), totalCount)
 
     }
-
-
-
-
 
 
 }

@@ -1,0 +1,26 @@
+version: "3"
+
+services:
+  redis:
+    image: "redis:latest"
+    ports:
+      - "6379:6379"
+    networks:
+      - my-network
+  app:
+    image: "choiminji0224/publisher"
+    ports:
+      - "8081:8081"
+    networks:
+      - my-network
+    volumes:
+      - my-volume:/tmp
+    depends_on:
+      - redis
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+networks:
+  my-network:
+    driver: bridge
+volumes:
+  my-volume:

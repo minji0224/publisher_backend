@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*
 
 @Tag(name = "출판사 정보 관련 API")
 @RestController
-@RequestMapping("/profile")
+@RequestMapping("api/profile")
 class ProfileController {
 
     @Operation(summary = "해당 출판사 프로필 조회", security = [SecurityRequirement(name = "bearer-key")])

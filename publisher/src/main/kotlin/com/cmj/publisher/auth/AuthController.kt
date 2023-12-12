@@ -5,19 +5,17 @@ import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.servlet.http.Cookie
 import jakarta.servlet.http.HttpServletResponse
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder
 
 @Tag(name = "인증 관련 API")
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 class AuthController(private val authService: AuthService) {
+
 
     @Operation(summary = "회원가입")
     @PostMapping(value = ["/signup"])
@@ -45,10 +43,15 @@ class AuthController(private val authService: AuthService) {
 
     @Operation(summary = "로그인")
     @PostMapping(value = ["/signin"])
-    fun signIn(@RequestParam publisherName: String, @RequestParam password: String,
-               httpServletResponse: HttpServletResponse,) : ResponseEntity<*> {
+    fun signIn(
+        @RequestParam publisherName: String,
+        @RequestParam password: String,
+        httpServletResponse: HttpServletResponse,
+        @RequestHeader (value = "referer", required = false) referer: String,
+    ) : ResponseEntity<*> {
         println(publisherName)
         println(password)
+        println(referer)
 
         // 쿠키 생성 작업
         val (result, message) = authService.authenticate(publisherName, password)
@@ -57,7 +60,7 @@ class AuthController(private val authService: AuthService) {
             val cookie = Cookie("token", message)
             cookie.path = "/"
             cookie.maxAge = (JwtUtil.TOKEN_TIMEOUT / 1000L).toInt() // 만료시간
-            cookie.domain = "localhost" // 쿠키를 사용할 수 있는 도메인
+            cookie.domain = referer.split("/")[2].split(":")[0] // 쿠키를 사용할 수 있는 도메인
 
             // 2. 응답헤더에 쿠키 추가
             httpServletResponse.addCookie(cookie)
@@ -65,15 +68,13 @@ class AuthController(private val authService: AuthService) {
 
             // 3. 이후 웹 첫페이지로 리다이렉트
             return  ResponseEntity.status(HttpStatus.FOUND).location(
-                ServletUriComponentsBuilder.fromHttpUrl("http://localhost:5000").build().toUri()
-            ).build<Any>()
-        }
-
-        // 오류 메세지 반환
-        return ResponseEntity.status(HttpStatus.FOUND).location(
-                ServletUriComponentsBuilder.fromHttpUrl("http://localhost:5000/login.html?err=$message")
+                ServletUriComponentsBuilder
+                    .fromHttpUrl("${referer.split("/")[0]}//${referer.split("/")[2]}")
                     .build().toUri()
             ).build<Any>()
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(mapOf("status" to "error", "message" to message))
+        }
     }
 
 

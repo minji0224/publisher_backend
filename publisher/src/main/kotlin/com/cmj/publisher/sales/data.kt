@@ -1,4 +1,4 @@
-package com.cmj.publisher.chart
+package com.cmj.publisher.sales
 
 
 data class PieChartResponse(

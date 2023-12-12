@@ -19,28 +19,39 @@ import org.springframework.stereotype.Service
 class RabbitConsumer {
     private val mapper = jacksonObjectMapper()
 
-    // 실시간 도서재고 업데이트
+//     실시간 도서재고 업데이트
     @RabbitListener(queues = ["book-stocks"])
     fun bookStocksReceive(message: String) {
         println("관리자가 큐로 보낸 도서 재고: $message")
-        val bookStocks : BookStocksMessageRes = mapper.readValue(message)
-        println(bookStocks)
-        transaction {
-            Books.update ({ Books.id eq bookStocks.id }){
-                it[Books.currentQuantity] = bookStocks.stocks.toInt()
+        try {
+            val bookStocks : BookStocksMessageRes = mapper.readValue(message)
+            println(bookStocks)
+            transaction {
+                Books.update ({ Books.id eq bookStocks.id }){
+                    it[Books.currentQuantity] = bookStocks.stocks.toInt()
+                }
             }
+
+        } catch(e: Exception) {
+            println("book-active 큐 에러")
         }
+
     }
 
     @RabbitListener(queues = ["book-active"])
     fun bookActiveReceive(message: String) {
         println("관리자가 큐로 보낸 도서몰 등록 여부: $message")
-        val bookActive : BookActiveMessageRes = mapper.readValue(message)
-        println(bookActive)
-        transaction {
-            Books.update({Books.id eq bookActive.id }) {
-                it[Books.isActive] = bookActive.isActive
+
+        try {
+            val bookActive : BookActiveMessageRes = mapper.readValue(message)
+            println(bookActive)
+            transaction {
+                Books.update({Books.id eq bookActive.id }) {
+                    it[Books.isActive] = bookActive.isActive
+                }
             }
+        } catch(e: Exception) {
+            println("book-active 큐 에러")
         }
     }
 

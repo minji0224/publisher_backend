@@ -15,7 +15,9 @@ class WebMvcConfig(val authInterceptor: AuthInterceptor) : WebMvcConfigurer {
             .allowedOrigins(
             "http://localhost:5500",
             "http://127.0.0.1:5500",
-            "http://localhost:5000"
+            "http://localhost:5000",
+            "https://d2mbtof0kahb6e.cloudfront.net",
+            "http://ec2-43-200-189-71.ap-northeast-2.compute.amazonaws.com"
         ).allowedMethods("*") // 모든메서드허용(겟, 포스트, 델리트 등)
     }
     // 인증처리용 인터셉터 추가
